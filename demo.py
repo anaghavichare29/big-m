@@ -1,13 +1,35 @@
+#shweta's part
+st.title("📊 Big M Method Solver (Notebook Style)")
+obj_input = st.text_input("Enter Objective Function")
+
+constraints_input = st.text_area(
+    "Enter Constraints (one per line)",    
+)
+if st.button("Solve"):
+    try:
+        c = parse_objective(obj_input)
+        num_vars = len(c)
+
+        A, b, signs = [], [], []
+
+        for line in constraints_input.strip().split("\n"):
+            if line.strip() == "":
+                continue
+            row, val, sign = parse_constraint(line, num_vars)
+            A.append(row)
+            b.append(val)
+            signs.append(sign)
+
+        steps, final_table, basis = big_m_method(c, A, b, signs)
+
+#aditya's part
 import streamlit as st
 import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-M = 1e6  # Big M value
-
-
-# ---------- PARSER ---------- #
+#ankita's part
 def parse_objective(obj_str):
     terms = re.findall(r'([+-]?\d*)x(\d+)', obj_str.replace(" ", ""))
     max_var = max(int(var) for _, var in terms)
@@ -24,11 +46,10 @@ def parse_objective(obj_str):
 
     return c
 
-
+#shriya's part
 def parse_constraint(constraint, num_vars):
     parts = re.split(r'(<=|>=|=)', constraint)
     expr, sign, val = parts[0], parts[1], float(parts[2])
-
     row = [0] * num_vars
     terms = re.findall(r'([+-]?\d*)x(\d+)', expr.replace(" ", ""))
 
@@ -44,8 +65,9 @@ def parse_constraint(constraint, num_vars):
 
     return row, val, sign
 
+#My part
+M = 1e6
 
-# ---------- BIG M METHOD ---------- #
 def big_m_method(c, A, b, signs):
     m = len(A)
     n = len(c)
@@ -53,8 +75,7 @@ def big_m_method(c, A, b, signs):
     table = []
     basis = []
     cb = []
-
-    var_names = [f"x{i+1}" for i in range(n)]
+        var_names = [f"x{i+1}" for i in range(n)]
     slack_names = [f"s{i+1}" for i in range(m)]
     artificial_names = [f"A{i+1}" for i in range(m)]
 
@@ -119,7 +140,6 @@ def big_m_method(c, A, b, signs):
 
         steps.append((df.copy(), pivot_row, pivot_col))
 
-        # Pivot operation
         pivot = table[pivot_row][pivot_col]
         table[pivot_row] /= pivot
 
@@ -132,80 +152,16 @@ def big_m_method(c, A, b, signs):
 
     return steps, table, basis
 
-
-# ---------- GRAPH ---------- #
-import time
-
-def plot_graph_dynamic(A, b, solution, placeholder):
-    x = np.linspace(0, 10, 200)
-
-    fig, ax = plt.subplots()
-
-    # Draw constraints one by one (animation feel)
-    for i in range(len(A)):
-        a1, a2 = A[i]
-        if a2 != 0:
-            y = (b[i] - a1 * x) / a2
-
-            ax.plot(x, y)
-            ax.set_xlim(0, 10)
-            ax.set_ylim(0, 10)
-            ax.set_xlabel("x1")
-            ax.set_ylabel("x2")
-            ax.grid()
-
-            placeholder.pyplot(fig)
-            time.sleep(0.6)  # animation delay
-
-    # Plot optimal point at end
-    ax.scatter(solution[0], solution[1])
-    ax.text(solution[0], solution[1], "Optimal")
-
-    placeholder.pyplot(fig)
-
-
-# ---------- UI ---------- #
-st.title("📊 Big M Method Solver (Notebook Style)")
-
-obj_input = st.text_input("Enter Objective Function")
-
-constraints_input = st.text_area(
-    "Enter Constraints (one per line)"    
-)
-
-if st.button("Solve"):
-    try:
-        c = parse_objective(obj_input)
-        num_vars = len(c)
-
-        A, b, signs = [], [], []
-
-        for line in constraints_input.strip().split("\n"):
-            if line.strip() == "":
-                continue
-            row, val, sign = parse_constraint(line, num_vars)
-            A.append(row)
-            b.append(val)
-            signs.append(sign)
-
-        A_np = np.array(A)
-        b_np = np.array(b)
-
-        # Solve using Big M
-        steps, final_table, basis = big_m_method(c, A, b, signs)
-
+#mrunali's part
         st.subheader("📊 Iteration Tables (Big M Method)")
 
         for i, (df, prow, pcol) in enumerate(steps):
             st.write(f"### Iteration {i}")
-
             if pcol is not None:
                 st.write(f"Pivot Column: {df.columns[pcol+2]}")
                 st.write(f"Pivot Row: {prow}")
-
             st.dataframe(df)
 
-        # Extract solution
         solution = np.zeros(len(c))
         for i, var in enumerate(basis):
             if var.startswith("x"):
@@ -216,17 +172,14 @@ if st.button("Solve"):
 
         st.subheader("✅ Final Result")
 
-        # Show each variable clearly
         for i, val in enumerate(solution):
             st.write(f"x{i+1} = {round(val, 4)}")
 
         st.write("Optimal Value (Z) =", round(optimal_value, 4))
 
-        # Graph
-        if len(c) == 2:            
+        if len(c) == 2:
             st.subheader("📈 Graph")
-            graph_placeholder = st.empty()
-            plot_graph_dynamic(A, b, solution, graph_placeholder)
+            plot_graph_dynamic(A, b, solution, st.empty())
 
     except Exception as e:
         st.error(f"Error: {e}")

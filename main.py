@@ -3,6 +3,7 @@ import re
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 M = 1e6  # Big M value
 
@@ -11,6 +12,10 @@ M = 1e6  # Big M value
 def parse_objective(obj_str):
     terms = re.findall(r'([+-]?\d*)x(\d+)', obj_str.replace(" ", ""))
     max_var = max(int(var) for _, var in terms)
+
+    # 🔴 LIMIT TO 3 VARIABLES
+    if max_var > 3:
+        raise ValueError("Only up to 3 variables are supported.")
 
     c = [0] * max_var
     for coef, var in terms:
@@ -133,44 +138,56 @@ def big_m_method(c, A, b, signs):
     return steps, table, basis
 
 
-# ---------- GRAPH ---------- #
-import time
+# ---------- GRAPH (UPDATED) ---------- #
+def plot_graph(A, b, solution, num_vars):
+    fig = plt.figure()
 
-def plot_graph_dynamic(A, b, solution, placeholder):
-    x = np.linspace(0, 10, 200)
+    # ✅ 2 VARIABLES
+    if num_vars == 2:
+        ax = fig.add_subplot(111)
+        x = np.linspace(0, 10, 200)
 
-    fig, ax = plt.subplots()
+        for i in range(len(A)):
+            a1, a2 = A[i]
+            if a2 != 0:
+                y = (b[i] - a1 * x) / a2
+                ax.plot(x, y)
 
-    # Draw constraints one by one (animation feel)
-    for i in range(len(A)):
-        a1, a2 = A[i]
-        if a2 != 0:
-            y = (b[i] - a1 * x) / a2
+        ax.scatter(solution[0], solution[1])
+        ax.set_xlabel("x1")
+        ax.set_ylabel("x2")
+        ax.set_title("2D Graph")
 
-            ax.plot(x, y)
-            ax.set_xlim(0, 10)
-            ax.set_ylim(0, 10)
-            ax.set_xlabel("x1")
-            ax.set_ylabel("x2")
-            ax.grid()
+    # ✅ 3 VARIABLES (NEW 🔥)
+    elif num_vars == 3:
+        ax = fig.add_subplot(111, projection='3d')
 
-            placeholder.pyplot(fig)
-            time.sleep(0.6)  # animation delay
+        x = np.linspace(0, 10, 30)
+        y = np.linspace(0, 10, 30)
+        X, Y = np.meshgrid(x, y)
 
-    # Plot optimal point at end
-    ax.scatter(solution[0], solution[1])
-    ax.text(solution[0], solution[1], "Optimal")
+        for i in range(len(A)):
+            a1, a2, a3 = A[i]
+            if a3 != 0:
+                Z = (b[i] - a1*X - a2*Y) / a3
+                ax.plot_surface(X, Y, Z, alpha=0.3)
 
-    placeholder.pyplot(fig)
+        ax.scatter(solution[0], solution[1], solution[2])
+        ax.set_xlabel("x1")
+        ax.set_ylabel("x2")
+        ax.set_zlabel("x3")
+        ax.set_title("3D Feasible Region")
+
+    return fig
 
 
 # ---------- UI ---------- #
-st.title("📊 Big M Method Solver (Notebook Style)")
+st.title("📊 Big M Method Solver")
 
 obj_input = st.text_input("Enter Objective Function")
 
 constraints_input = st.text_area(
-    "Enter Constraints (one per line)"    
+    "Enter Constraints (one per line)"
 )
 
 if st.button("Solve"):
@@ -188,13 +205,10 @@ if st.button("Solve"):
             b.append(val)
             signs.append(sign)
 
-        A_np = np.array(A)
-        b_np = np.array(b)
-
-        # Solve using Big M
+        # Solve
         steps, final_table, basis = big_m_method(c, A, b, signs)
 
-        st.subheader("📊 Iteration Tables (Big M Method)")
+        st.subheader("📊 Iteration Tables")
 
         for i, (df, prow, pcol) in enumerate(steps):
             st.write(f"### Iteration {i}")
@@ -216,17 +230,15 @@ if st.button("Solve"):
 
         st.subheader("✅ Final Result")
 
-        # Show each variable clearly
         for i, val in enumerate(solution):
             st.write(f"x{i+1} = {round(val, 4)}")
 
         st.write("Optimal Value (Z) =", round(optimal_value, 4))
 
-        # Graph
-        if len(c) == 2:            
-            st.subheader("📈 Graph")
-            graph_placeholder = st.empty()
-            plot_graph_dynamic(A, b, solution, graph_placeholder)
+        # ✅ GRAPH
+        st.subheader("📈 Graph")
+        fig = plot_graph(A, b, solution, num_vars)
+        st.pyplot(fig)
 
     except Exception as e:
         st.error(f"Error: {e}")

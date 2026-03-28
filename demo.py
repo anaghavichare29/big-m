@@ -1,5 +1,5 @@
 #shweta's part
-st.title("📊 Big M Method Solver (Notebook Style)")
+st.title("📊 Big M Method Solver")
 obj_input = st.text_input("Enter Objective Function")
 
 constraints_input = st.text_area(
